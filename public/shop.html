@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop dashboard — NearStock</title>
+<meta name="description" content="Manage inventory, sync stock from the billing system, and work the FIFO customer request queue.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏪</text></svg>">
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="logo" href="/">
+      <span class="logo-mark">🛒</span>
+      <span>NearStock<small>Shop dashboard</small></span>
+    </a>
+    <nav class="topnav">
+      <a href="/"><span class="nav-full">Search</span><span class="nav-short">Find</span></a>
+      <a href="/shop.html" class="active"><span class="nav-full">Shop dashboard</span><span class="nav-short">Shop</span></a>
+      <a href="/about.html"><span class="nav-full">How it works</span><span class="nav-short">Docs</span></a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="hero">
+    <h1>Shop dashboard</h1>
+    <p>Keep stock accurate, sync sales from the billing counter, and serve customer requests in the order they arrived.</p>
+  </div>
+
+  <section>
+    <div class="locbar">
+      <span class="pin">🏪</span>
+      <div class="loc-text">
+        <strong>Signed in as shop</strong>
+        <span id="store-address">—</span>
+      </div>
+      <div class="spacer"></div>
+      <select id="store-select" aria-label="Select a shop"></select>
+      <button class="btn btn-sm" id="refresh" type="button">Refresh</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Customer request queue</h2>
+      <span class="hint">FIFO — the front of the line is served first. Enqueue and dequeue are both O(1).</span>
+    </div>
+    <div class="card card-pad">
+      <div id="queue-strip" class="queue-strip"></div>
+      <div class="queue-legend">
+        <span>⬅ <b>Front</b> — waiting longest, served next</span>
+        <span><b>Rear</b> ➡ — most recent request</span>
+      </div>
+      <div style="display:flex;gap:9px;margin-top:14px;flex-wrap:wrap">
+        <button class="btn btn-accent" id="serve-next" type="button">Serve next (dequeue)</button>
+        <button class="btn" id="peek" type="button">Peek front</button>
+        <div class="spacer" style="flex:1"></div>
+        <span class="hint" id="queue-count" style="align-self:center;font-size:12.5px;color:var(--text-faint)"></span>
+      </div>
+      <div class="dsa-note" style="margin-top:14px" id="queue-dsa">
+        <b>Queue (circular array)</b> — enqueue writes at <code>rear</code>, dequeue reads at <code>front</code>, both wrapping with modulo. No element shifting, so both are O(1).
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="grid-2">
+
+      <div class="card card-pad">
+        <div class="section-head">
+          <h2>Inventory</h2>
+          <span class="hint">Edit a quantity or price and press Save on that row.</span>
+        </div>
+        <div class="field" style="margin-bottom:12px">
+          <input id="inv-filter" type="search" placeholder="Filter products…" aria-label="Filter inventory">
+        </div>
+        <div class="table-scroll">
+          <table id="inv-table">
+            <thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Price ₹</th><th></th></tr></thead>
+            <tbody><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div class="card card-pad" style="margin-bottom:18px">
+          <div class="section-head">
+            <h2>Billing system sync</h2>
+            <span class="hint">Simulates the POS pushing stock changes.</span>
+          </div>
+          <div class="field">
+            <label for="bill-product">Product</label>
+            <select id="bill-product"></select>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="bill-qty">Units</label>
+              <input id="bill-qty" type="number" min="1" value="1">
+            </div>
+          </div>
+          <div style="display:flex;gap:9px">
+            <button class="btn btn-block" id="bill-sell" type="button">🧾 Record sale (−)</button>
+            <button class="btn btn-block" id="bill-restock" type="button">📦 Restock (+)</button>
+          </div>
+          <div class="dsa-note" style="margin-top:12px">
+            POST <b>/api/stores/:id/billing-sync</b> → the customer app sees the new count on its next search.
+          </div>
+        </div>
+
+        <div class="card card-pad">
+          <div class="section-head"><h2>Recently served</h2></div>
+          <div id="history"><div class="empty" style="padding:20px">No requests served yet.</div></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Billing sync log</h2>
+      <span class="hint">Every stock delta pushed from a shop's counter, newest first.</span>
+    </div>
+    <div class="card">
+      <div class="table-scroll">
+        <table id="sync-table">
+          <thead><tr><th>Shop</th><th>Product</th><th class="num">Delta</th><th>Source</th><th>When</th></tr></thead>
+          <tbody><tr><td colspan="5" class="empty">No sync events yet — record a sale above.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span>NearStock shop console.</span>
+    <span class="spacer"></span>
+    <a href="/api/meta">API status</a>
+    <button class="btn btn-sm btn-ghost" id="reset-demo" type="button">Reset demo data</button>
+  </footer>
+</main>
+
+<script src="/js/common.js"></script>
+<script src="/js/shop.js"></script>
+</body>
+</html>

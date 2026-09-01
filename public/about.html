@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How NearStock works</title>
+<meta name="description" content="Architecture, data model, data structures and REST API reference for NearStock.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+<link rel="stylesheet" href="/css/styles.css">
+<style>
+  .prose { max-width: 76ch; }
+  .prose h2 { font-size: 19px; letter-spacing: -.02em; margin: 34px 0 10px; }
+  .prose h3 { font-size: 15px; margin: 22px 0 6px; }
+  .prose p, .prose li { color: var(--text-soft); font-size: 14.5px; }
+  .prose code { font-family: var(--mono); font-size: 12.5px; background: var(--bg-soft); padding: 1.5px 5px; border-radius: 5px; color: var(--text); }
+  pre { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-s);
+        padding: 14px 16px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.65; color: var(--text-soft); }
+  .api td:first-child { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+  .method { display:inline-block; font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+            padding: 1.5px 6px; border-radius: 5px; margin-right: 6px; }
+  .m-get { background: var(--brand-soft); color: var(--brand); }
+  .m-post{ background: var(--accent-soft); color: var(--accent); }
+  .m-put { background: var(--warn-soft);  color: var(--warn); }
+  .m-del { background: var(--danger-soft);color: var(--danger); }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="logo" href="/">
+      <span class="logo-mark">🛒</span>
+      <span>NearStock<small>Architecture</small></span>
+    </a>
+    <nav class="topnav">
+      <a href="/"><span class="nav-full">Search</span><span class="nav-short">Find</span></a>
+      <a href="/shop.html"><span class="nav-full">Shop dashboard</span><span class="nav-short">Shop</span></a>
+      <a href="/about.html" class="active"><span class="nav-full">How it works</span><span class="nav-short">Docs</span></a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap prose">
+
+  <div class="hero">
+    <h1>How NearStock works</h1>
+    <p>A smart nearby-inventory discovery system: shops push stock from their billing counter, customers search for a product and get every nearby shop that has it, ranked by real distance.</p>
+  </div>
+
+  <h2>The flow</h2>
+  <pre>  Shop billing / POS system
+            │  stock delta (product sold or restocked)
+            ▼
+  Node.js + Express REST API
+            │  read / write
+            ▼
+       MySQL  ──────────────  (seeded in-memory store when no DB is configured)
+            │
+            ▼
+  Customer app (this website · same API a Flutter client would call)
+            │
+            ├─ search for a product      → linear search + merge sort
+            ├─ find shops that stock it  → inventory join
+            ├─ calculate distance        → Haversine formula
+            ├─ rank shops                → MinHeap, k-smallest extraction
+            └─ place a request           → Queue, enqueue O(1)
+                                            shop serves front → dequeue O(1)</pre>
+
+  <h2>Data structures</h2>
+
+  <h3>Queue — the primary structure</h3>
+  <p>
+    Customer requests are held in a First-In-First-Out queue, one per shop, so a shop always
+    serves whoever has waited longest. It is implemented in <code>server/lib/queue.js</code> as a
+    <b>circular array</b> (ring buffer) rather than a plain JavaScript array, because
+    <code>Array.shift()</code> is O(n) — it re-indexes every remaining element. A ring buffer
+    keeps a <code>front</code> and a <code>rear</code> index and wraps them with modulo, so:
+  </p>
+  <pre>  front ─┐                        ┌─ rear
+         ▼                        ▼
+  [  _ ,  R1 ,  R2 ,  R3 ,  _ ,  _ ,  _ ,  _  ]
+          ▲ dequeue here    enqueue here ▲
+
+  enqueue(x)   O(1)      isEmpty()   O(1)
+  dequeue()    O(1)      size        O(1)
+  peek()       O(1)      remove(p)   O(n)   (cancellation)</pre>
+  <p>
+    When the ring fills, the backing array doubles and is re-linearised — amortised O(1)
+    per insertion. Against MySQL the same ordering is enforced by a monotonically increasing
+    <code>position</code> ticket column: dequeue is <code>the smallest position still 'waiting'</code>.
+  </p>
+
+  <h3>MinHeap — finding the nearest shop</h3>
+  <p>
+    Once every stocking shop has a distance, "which is nearest?" is a minimum-extraction
+    problem. <code>server/lib/minheap.js</code> builds a binary min-heap with Floyd's bottom-up
+    heapify in O(n) and extracts the k closest shops in O(k log n) — cheaper than a full
+    O(n log n) sort whenever k is small, which it always is (a customer wants the top 3–5).
+    Ties break toward in-stock first, then lower price.
+  </p>
+
+  <h3>Searching and sorting</h3>
+  <p>
+    Product lookup is a linear scan scored so prefix matches outrank mid-string ones, with a
+    binary search over a name-sorted index as an exact-match fast path. Ranking uses a
+    hand-written stable <b>merge sort</b> rather than <code>Array.prototype.sort</code>, so the
+    divide-and-conquer step stays visible in the codebase.
+  </p>
+
+  <h3>Distance</h3>
+  <p>
+    The <b>Haversine formula</b> gives the great-circle distance between two latitude/longitude
+    points on a sphere of radius 6371 km. It is available both in JavaScript
+    (<code>server/lib/geo.js</code>) and as the MySQL stored function
+    <code>haversine_km()</code> in <code>db/schema.sql</code>, so ranking can be pushed down
+    into SQL when the catalogue grows.
+  </p>
+
+  <h2>Database</h2>
+  <pre>  users          user_id, name, email, phone, role, latitude, longitude
+  stores         store_id, owner_id → users, name, category, address,
+                 city, phone, latitude, longitude, opens_at, closes_at, rating
+  products       product_id, name, brand, category, unit, base_price, barcode
+  inventory      inventory_id, store_id → stores, product_id → products,
+                 quantity, price, updated_at        UNIQUE(store_id, product_id)
+  request_queue  request_id, store_id, product_id, customer_name, quantity,
+                 position, status, enqueued_at, processed_at
+  billing_sync   sync_id, store_id, product_id, delta, source, synced_at</pre>
+  <p>
+    <code>v_availability</code> joins inventory to products and stores for the search path, and
+    <code>idx_queue_fifo (store_id, status, position)</code> makes the dequeue lookup an index seek.
+  </p>
+
+  <h2>REST API</h2>
+  <div class="card" style="margin: 14px 0">
+    <div class="table-scroll">
+      <table class="api">
+        <thead><tr><th>Endpoint</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method m-get">GET</span>/api/health</td><td>Liveness probe</td></tr>
+          <tr><td><span class="method m-get">GET</span>/api/meta</td><td>Active data driver, counts, DSA summary</td></tr>
+          <tr><td><span class="method m-get">GET</span>/api/search?q&amp;lat&amp;lng</td><td>The customer's one-shot query: matched products, each with shops ranked by distance</td></tr>
+          <tr><td><span class="method m-get">GET</span>/api/products?q</td><td>Catalogue search</td></tr>
+          <tr><td><span class="method m-get">GET</span>/api/products/:id/shops</td><td>Every shop stocking one product, distance-ranked</td></tr>
+          <tr><td><span class="method m-get">GET</span>/api/stores?lat&amp;lng</td><td>All shops, merge-sorted by distance</td></tr>
+          <tr><td><span class="method m-get">GET</span>/api/stores/:id/inventory</td><td>One shop's stock list</td></tr>
+          <tr><td><span class="method m-put">PUT</span>/api/stores/:id/inventory</td><td>Set quantity / price for a product</td></tr>
+          <tr><td><span class="method m-post">POST</span>/api/stores/:id/billing-sync</td><td>Apply one stock delta from the POS</td></tr>
+          <tr><td><span class="method m-post">POST</span>/api/billing/webhook</td><td>Batch push of sale lines from a billing terminal</td></tr>
+          <tr><td><span class="method m-get">GET</span>/api/billing/recent</td><td>Recent sync events</td></tr>
+          <tr><td><span class="method m-post">POST</span>/api/queue</td><td><b>enqueue</b> — join a shop's request queue</td></tr>
+          <tr><td><span class="method m-get">GET</span>/api/stores/:id/queue</td><td>Queue snapshot, front first</td></tr>
+          <tr><td><span class="method m-get">GET</span>/api/stores/:id/queue/peek</td><td><b>peek</b> — who is next</td></tr>
+          <tr><td><span class="method m-post">POST</span>/api/stores/:id/queue/next</td><td><b>dequeue</b> — serve the front of the line</td></tr>
+          <tr><td><span class="method m-del">DEL</span>/api/stores/:id/queue/:requestId</td><td>Cancel a waiting request</td></tr>
+          <tr><td><span class="method m-get">GET</span>/api/queues</td><td>Every shop's waiting line</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h2>Running it with MySQL</h2>
+  <p>The app runs on a seeded in-memory dataset out of the box. To switch to real MySQL:</p>
+  <pre>  mysql -u root -p &lt; db/schema.sql
+  mysql -u root -p nearstock &lt; db/seed.sql
+
+  # then set either
+  DATABASE_URL=mysql://user:pass@host:3306/nearstock
+  # or
+  DB_HOST=localhost  DB_USER=root  DB_PASSWORD=secret  DB_NAME=nearstock</pre>
+  <p>
+    The data layer detects the connection at boot and switches drivers; the routes never
+    change. If MySQL is configured but unreachable the app logs the reason and degrades to the
+    in-memory dataset rather than failing the whole site.
+  </p>
+
+  <h2>Building a Flutter client</h2>
+  <p>
+    Every screen on this website is a plain <code>fetch</code> against the REST API, so a Flutter
+    app is a drop-in second client: call <code>GET /api/search?q=milk&amp;lat=..&amp;lng=..</code>
+    with <code>package:http</code>, take the device position from <code>geolocator</code>, and
+    <code>POST /api/queue</code> to join a shop's line.
+  </p>
+
+  <footer class="footer">
+    <span>NearStock — Node.js · Express · MySQL · REST</span>
+    <span class="spacer"></span>
+    <a href="/">Back to search</a>
+  </footer>
+</main>
+</body>
+</html>
