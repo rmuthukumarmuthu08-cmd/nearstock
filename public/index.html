@@ -5,16 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NearStock — Find what's in stock near you</title>
 <meta name="description" content="NearStock finds which nearby shops have the product you need in stock, ranks them by real distance, and lets you join a shop's request queue.">
+<meta name="theme-color" content="#06070c">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
+
+<div class="aurora"></div>
+<div class="grid-veil"></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7c5cff"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+  </defs>
+</svg>
 
 <header class="topbar">
   <div class="wrap topbar-inner">
     <a class="logo" href="/">
       <span class="logo-mark">🛒</span>
-      <span>NearStock<small>Nearby inventory discovery</small></span>
+      <span class="logo-text">NearStock<small>Nearby inventory discovery</small></span>
     </a>
     <nav class="topnav">
       <a href="/" class="active"><span class="nav-full">Search</span><span class="nav-short">Find</span></a>
@@ -27,19 +41,29 @@
 <main class="wrap">
 
   <div class="hero">
-    <h1>Find what's in stock, near you.</h1>
-    <p>Search a product and NearStock shows every nearby shop that has it, ranked by real distance from where you are — with live stock counts pushed straight from each shop's billing system.</p>
+    <div class="eyebrow"><span class="dot"></span> Live inventory across <span id="hero-shopcount">10</span> Coimbatore shops</div>
+    <h1>Find what's in stock,<br><span class="grad-text">near you.</span></h1>
+    <p class="lede">Search any product and NearStock returns every nearby shop that has it — ranked by real great-circle distance, with live stock counts pushed straight from each shop's billing counter.</p>
+
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="n" id="hs-shops">—</div><div class="l">Shops</div></div>
+      <div class="hero-stat"><div class="n" id="hs-products">—</div><div class="l">Products</div></div>
+      <div class="hero-stat"><div class="n" id="hs-units">—</div><div class="l">Units tracked</div></div>
+      <div class="hero-stat"><div class="n" id="hs-queue">—</div><div class="l">In queue</div></div>
+    </div>
   </div>
 
   <section>
-    <form class="searchbar" id="search-form" role="search">
-      <span aria-hidden="true">🔍</span>
-      <input id="q" type="search" placeholder="Try “milk”, “paracetamol”, “notebook”, “charger”…" autocomplete="off" aria-label="Search for a product">
-      <button class="btn btn-primary" type="submit">Search</button>
+    <form class="searchwrap" id="search-form" role="search">
+      <div class="searchbar">
+        <span class="ico" aria-hidden="true">🔍</span>
+        <input id="q" type="search" placeholder="Search “milk”, “paracetamol”, “notebook”, “charger”…" autocomplete="off" aria-label="Search for a product">
+        <button class="btn btn-primary" type="submit">Search</button>
+      </div>
     </form>
 
     <div class="chips" id="suggestions">
-      <span class="chip-label">Popular:</span>
+      <span class="chip-label">Try</span>
       <button class="chip" type="button">Aavin Milk</button>
       <button class="chip" type="button">Paracetamol</button>
       <button class="chip" type="button">Notebook</button>
@@ -56,10 +80,9 @@
       </div>
       <div class="spacer"></div>
       <select id="loc-preset" aria-label="Choose a location">
-        <option value="">Pick a landmark…</option>
+        <option value="">Jump to a landmark…</option>
       </select>
-      <label class="sr-only" for="instock">In stock only</label>
-      <button class="btn btn-sm" id="toggle-instock" type="button" aria-pressed="false">In-stock only: off</button>
+      <button class="btn btn-sm" id="toggle-instock" type="button" aria-pressed="false">In-stock only</button>
       <button class="btn btn-sm btn-primary" id="use-gps" type="button">Use my location</button>
     </div>
   </section>
@@ -70,13 +93,13 @@
       <span class="hint" id="results-hint"></span>
     </div>
     <div id="results"></div>
-    <div class="dsa-note" id="dsa-note" hidden></div>
+    <div class="card trace" id="dsa-note" hidden></div>
   </section>
 
   <section id="requests-section" hidden>
     <div class="section-head">
       <h2>Your requests</h2>
-      <span class="hint">Requests you have placed are served by each shop in FIFO order.</span>
+      <span class="hint">Each shop serves its line in strict FIFO order.</span>
     </div>
     <div class="card" id="my-requests"></div>
   </section>
@@ -84,7 +107,7 @@
   <section id="intro-section">
     <div class="grid-2">
       <div class="card card-pad">
-        <div class="section-head"><h2>Nearby shops on NearStock</h2><span class="hint" id="store-count"></span></div>
+        <div class="section-head"><h2>Shops on NearStock</h2><span class="hint" id="store-count"></span></div>
         <div class="table-scroll">
           <table id="stores-table">
             <thead><tr><th>Shop</th><th>Type</th><th class="num">Distance</th><th class="num">Waiting</th></tr></thead>
@@ -94,24 +117,23 @@
       </div>
 
       <div class="card card-pad">
-        <div class="section-head"><h2>How the ranking works</h2></div>
-        <p style="font-size:13.5px;color:var(--text-soft);margin:0 0 12px">
-          Every search runs three data-structure steps on the server:
-        </p>
-        <ol style="font-size:13.5px;color:var(--text-soft);margin:0;padding-left:18px;line-height:1.75">
-          <li><b style="color:var(--text)">Linear search</b> over the product catalogue, scored so prefix matches rank first.</li>
-          <li><b style="color:var(--text)">Merge sort</b> — stable, O(n&nbsp;log&nbsp;n) — orders those matches by relevance.</li>
-          <li><b style="color:var(--text)">MinHeap</b> holds every stocking shop keyed by Haversine distance; the k nearest are extracted in O(n&nbsp;+&nbsp;k&nbsp;log&nbsp;n).</li>
+        <div class="section-head"><h2>What runs on every search</h2></div>
+        <ol style="font-size:13.5px;color:var(--ink-2);margin:0;padding-left:20px;line-height:1.85">
+          <li><b style="color:var(--ink)">Linear search</b> over the catalogue, scored so prefix matches rank first.</li>
+          <li><b style="color:var(--ink)">Merge sort</b> — stable, O(n&nbsp;log&nbsp;n) — orders matches by relevance.</li>
+          <li><b style="color:var(--ink)">Haversine</b> distance from you to every stocking shop.</li>
+          <li><b style="color:var(--ink)">MinHeap</b> extracts the k nearest in O(n&nbsp;+&nbsp;k&nbsp;log&nbsp;n) — cheaper than a full sort.</li>
         </ol>
-        <p style="font-size:13.5px;color:var(--text-soft);margin:12px 0 0">
-          Placing a request uses the project's core structure: a <b style="color:var(--text)">Queue</b> built as a circular array, so joining the line and being served are both O(1).
+        <p style="font-size:13.5px;color:var(--ink-2);margin:16px 0 0">
+          Reserving an item uses the project's core structure: a <b style="color:var(--ink)">Queue</b> built as a circular array, so joining the line and being served are both O(1).
         </p>
+        <a class="btn btn-sm" href="/about.html" style="margin-top:16px">Read the architecture →</a>
       </div>
     </div>
   </section>
 
   <footer class="footer">
-    <span>NearStock — Flutter-ready REST API on Node.js + Express + MySQL.</span>
+    <span>NearStock — Node.js · Express · MySQL · REST</span>
     <span class="spacer"></span>
     <a href="/api/meta">API status</a>
     <a href="/about.html">Architecture</a>

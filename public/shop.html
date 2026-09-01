@@ -5,16 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shop dashboard — NearStock</title>
 <meta name="description" content="Manage inventory, sync stock from the billing system, and work the FIFO customer request queue.">
+<meta name="theme-color" content="#06070c">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏪</text></svg>">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
+
+<div class="aurora"></div>
+<div class="grid-veil"></div>
 
 <header class="topbar">
   <div class="wrap topbar-inner">
     <a class="logo" href="/">
       <span class="logo-mark">🛒</span>
-      <span>NearStock<small>Shop dashboard</small></span>
+      <span class="logo-text">NearStock<small>Shop dashboard</small></span>
     </a>
     <nav class="topnav">
       <a href="/"><span class="nav-full">Search</span><span class="nav-short">Find</span></a>
@@ -26,21 +31,22 @@
 
 <main class="wrap">
 
-  <div class="hero">
-    <h1>Shop dashboard</h1>
-    <p>Keep stock accurate, sync sales from the billing counter, and serve customer requests in the order they arrived.</p>
+  <div class="hero" style="padding-bottom:8px">
+    <div class="eyebrow"><span class="dot"></span> Counter console · live</div>
+    <h1 style="font-size:clamp(28px,4.6vw,44px)">Shop <span class="grad-text">dashboard</span></h1>
+    <p class="lede">Keep stock accurate, push sales from the billing counter, and serve customer requests in the exact order they arrived.</p>
   </div>
 
   <section>
     <div class="locbar">
       <span class="pin">🏪</span>
       <div class="loc-text">
-        <strong>Signed in as shop</strong>
+        <strong id="store-name">—</strong>
         <span id="store-address">—</span>
       </div>
       <div class="spacer"></div>
       <select id="store-select" aria-label="Select a shop"></select>
-      <button class="btn btn-sm" id="refresh" type="button">Refresh</button>
+      <button class="btn btn-sm" id="refresh" type="button">↻ Refresh</button>
     </div>
   </section>
 
@@ -53,20 +59,30 @@
       <h2>Customer request queue</h2>
       <span class="hint">FIFO — the front of the line is served first. Enqueue and dequeue are both O(1).</span>
     </div>
+
     <div class="card card-pad">
+      <div class="ringbuf" style="margin-bottom:20px">
+        <svg id="ringbuf" viewBox="0 0 240 240" width="236" height="236" role="img"
+             aria-label="Circular array showing which slots hold waiting requests, with the front and rear pointers"></svg>
+        <div class="ringbuf-key">
+          <div><b>Circular array</b> — the queue's backing store</div>
+          <div><code>enqueue</code> writes at <b>rear</b>, then <code>rear = (rear+1) % n</code></div>
+          <div><code>dequeue</code> reads at <b>front</b>, then <code>front = (front+1) % n</code></div>
+          <div>Nothing shifts, so both stay <b>O(1)</b> — unlike <code>Array.shift()</code>, which is O(n).</div>
+        </div>
+      </div>
+
       <div id="queue-strip" class="queue-strip"></div>
       <div class="queue-legend">
-        <span>⬅ <b>Front</b> — waiting longest, served next</span>
-        <span><b>Rear</b> ➡ — most recent request</span>
+        <span>◀ <b style="color:var(--ink)">Front</b> — waited longest, served next</span>
+        <span><b style="color:var(--ink)">Rear</b> ▶ — most recent request</span>
       </div>
-      <div style="display:flex;gap:9px;margin-top:14px;flex-wrap:wrap">
-        <button class="btn btn-accent" id="serve-next" type="button">Serve next (dequeue)</button>
-        <button class="btn" id="peek" type="button">Peek front</button>
-        <div class="spacer" style="flex:1"></div>
-        <span class="hint" id="queue-count" style="align-self:center;font-size:12.5px;color:var(--text-faint)"></span>
-      </div>
-      <div class="dsa-note" style="margin-top:14px" id="queue-dsa">
-        <b>Queue (circular array)</b> — enqueue writes at <code>rear</code>, dequeue reads at <code>front</code>, both wrapping with modulo. No element shifting, so both are O(1).
+
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-accent" id="serve-next" type="button">Serve next · dequeue()</button>
+        <button class="btn" id="peek" type="button">peek()</button>
+        <div style="flex:1"></div>
+        <span id="queue-count" style="font-size:12.5px;color:var(--ink-3)"></span>
       </div>
     </div>
   </section>
@@ -77,9 +93,9 @@
       <div class="card card-pad">
         <div class="section-head">
           <h2>Inventory</h2>
-          <span class="hint">Edit a quantity or price and press Save on that row.</span>
+          <span class="hint">Edit a quantity or price, then Save that row.</span>
         </div>
-        <div class="field" style="margin-bottom:12px">
+        <div class="field" style="margin-bottom:14px">
           <input id="inv-filter" type="search" placeholder="Filter products…" aria-label="Filter inventory">
         </div>
         <div class="table-scroll">
@@ -91,33 +107,31 @@
       </div>
 
       <div>
-        <div class="card card-pad" style="margin-bottom:18px">
+        <div class="card card-pad" style="margin-bottom:20px">
           <div class="section-head">
             <h2>Billing system sync</h2>
-            <span class="hint">Simulates the POS pushing stock changes.</span>
+            <span class="hint">Simulates the POS.</span>
           </div>
           <div class="field">
             <label for="bill-product">Product</label>
             <select id="bill-product"></select>
           </div>
-          <div class="field-row">
-            <div class="field">
-              <label for="bill-qty">Units</label>
-              <input id="bill-qty" type="number" min="1" value="1">
-            </div>
+          <div class="field" style="max-width:130px">
+            <label for="bill-qty">Units</label>
+            <input id="bill-qty" type="number" min="1" value="1">
           </div>
-          <div style="display:flex;gap:9px">
-            <button class="btn btn-block" id="bill-sell" type="button">🧾 Record sale (−)</button>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-block" id="bill-sell" type="button">🧾 Sale (−)</button>
             <button class="btn btn-block" id="bill-restock" type="button">📦 Restock (+)</button>
           </div>
-          <div class="dsa-note" style="margin-top:12px">
-            POST <b>/api/stores/:id/billing-sync</b> → the customer app sees the new count on its next search.
+          <div class="dsa-note" style="margin-top:14px">
+            POST <b>/api/stores/:id/billing-sync</b> → customers see the new count on their next search.
           </div>
         </div>
 
         <div class="card card-pad">
           <div class="section-head"><h2>Recently served</h2></div>
-          <div id="history"><div class="empty" style="padding:20px">No requests served yet.</div></div>
+          <div id="history"><div class="empty" style="padding:22px">No requests served yet.</div></div>
         </div>
       </div>
 
@@ -127,7 +141,7 @@
   <section>
     <div class="section-head">
       <h2>Billing sync log</h2>
-      <span class="hint">Every stock delta pushed from a shop's counter, newest first.</span>
+      <span class="hint">Every stock delta pushed from a counter, newest first.</span>
     </div>
     <div class="card">
       <div class="table-scroll">
@@ -140,7 +154,7 @@
   </section>
 
   <footer class="footer">
-    <span>NearStock shop console.</span>
+    <span>NearStock shop console</span>
     <span class="spacer"></span>
     <a href="/api/meta">API status</a>
     <button class="btn btn-sm btn-ghost" id="reset-demo" type="button">Reset demo data</button>
