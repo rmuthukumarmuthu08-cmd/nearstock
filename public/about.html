@@ -5,44 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>How NearStock works</title>
 <meta name="description" content="Architecture, data model, data structures and REST API reference for NearStock.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
-<meta name="theme-color" content="#06070c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%234a90e2'/><g fill='none' stroke='%23fff' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M16 7l7 4v10l-7 4-7-4V11z'/><path d='M9 11l7 4 7-4M16 15v10'/></g></svg>">
+<meta name="theme-color" content="#dbeafe">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="/css/styles.css">
 <style>
   .prose { max-width: 78ch; }
-  .prose h2 { font-family: var(--display); font-size: 21px; letter-spacing: -.025em; margin: 42px 0 12px; }
-  .prose h3 { font-family: var(--display); font-size: 15.5px; margin: 26px 0 7px; color: var(--ink); }
-  .prose p, .prose li { color: var(--ink-2); font-size: 14.5px; line-height: 1.72; }
-  .prose b { color: var(--ink); }
-  .prose code { font-family: var(--mono); font-size: 12.5px; background: rgba(124,92,255,.13); padding: 2px 6px; border-radius: 5px; color: var(--v-2); }
-  pre { background: rgba(0,0,0,.35); border: 1px solid var(--line); border-radius: var(--r-s);
-        padding: 16px 18px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px;
-        line-height: 1.7; color: var(--ink-2); }
+  .prose h2 { font-size: 23px; font-weight: 600; letter-spacing: -.025em; margin: 46px 0 14px; }
+  .prose h3 { font-size: 16px; font-weight: 600; margin: 28px 0 8px; color: var(--ink); }
+  .prose p, .prose li { color: var(--ink-2); font-size: 14.5px; line-height: 1.8; font-weight: 300; }
+  .prose b { color: var(--ink); font-weight: 600; }
+  .prose code { font-family: var(--mono); font-size: 12.5px; background: rgba(46,111,216,.1);
+                padding: 2px 7px; border-radius: 6px; color: var(--blue); }
+  pre { background: rgba(255,255,255,.5); border: 1px solid var(--edge); border-radius: var(--r-s);
+        padding: 18px 20px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px;
+        line-height: 1.75; color: var(--ink-2); backdrop-filter: blur(10px); }
   pre code { background: none; padding: 0; color: inherit; }
   .api td:first-child { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
   .method { display:inline-block; font-family: var(--mono); font-size: 10px; font-weight: 700;
-            padding: 2px 7px; border-radius: 5px; margin-right: 7px; }
-  .m-get { background: rgba(124,92,255,.16); color: var(--v-2); }
-  .m-post{ background: rgba(20,184,166,.16); color: #5eead4; }
-  .m-put { background: rgba(250,178,25,.16); color: var(--warn-ink); }
-  .m-del { background: rgba(208,59,59,.16); color: var(--crit-ink); }
+            padding: 2px 8px; border-radius: 6px; margin-right: 8px; }
+  .m-get { background: rgba(46,111,216,.14); color: #22539f; }
+  .m-post{ background: rgba(29,122,140,.16); color: #14606f; }
+  .m-put { background: rgba(250,178,25,.2); color: #8a5f08; }
+  .m-del { background: rgba(208,59,59,.14); color: #a92a2a; }
 </style>
 </head>
 <body>
 
-<div class="aurora"></div>
-<div class="grid-veil"></div>
+<div class="scene"></div>
 
 <header class="topbar">
   <div class="wrap topbar-inner">
     <a class="logo" href="/">
-      <span class="logo-mark">🛒</span>
+      <span class="logo-mark" id="logo-mark"></span>
       <span class="logo-text">NearStock<small>Architecture</small></span>
     </a>
     <nav class="topnav">
       <a href="/"><span class="nav-full">Search</span><span class="nav-short">Find</span></a>
-      <a href="/shop.html"><span class="nav-full">Shop dashboard</span><span class="nav-short">Shop</span></a>
+      <a href="/shop.html"><span class="nav-full">Shop</span><span class="nav-short">Shop</span></a>
       <a href="/about.html" class="active"><span class="nav-full">How it works</span><span class="nav-short">Docs</span></a>
     </nav>
   </div>
@@ -190,11 +190,13 @@
     <code>POST /api/queue</code> to join a shop's line.
   </p>
 
-  <footer class="footer">
+  <footer class="card footer">
     <span>NearStock — Node.js · Express · MySQL · REST</span>
     <span class="spacer"></span>
     <a href="/">Back to search</a>
   </footer>
 </main>
+<script src="/js/common.js"></script>
+<script>document.addEventListener("DOMContentLoaded",()=>{const m=document.getElementById("logo-mark");if(m)m.innerHTML=icon("box");});</script>
 </body>
 </html>

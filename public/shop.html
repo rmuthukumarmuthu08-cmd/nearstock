@@ -5,25 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shop dashboard — NearStock</title>
 <meta name="description" content="Manage inventory, sync stock from the billing system, and work the FIFO customer request queue.">
-<meta name="theme-color" content="#06070c">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏪</text></svg>">
+<meta name="theme-color" content="#dbeafe">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%231d7a8c'/><g fill='none' stroke='%23fff' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M16 7l7 4v10l-7 4-7-4V11z'/><path d='M9 11l7 4 7-4M16 15v10'/></g></svg>">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
 
-<div class="aurora"></div>
-<div class="grid-veil"></div>
+<div class="scene"></div>
 
 <header class="topbar">
   <div class="wrap topbar-inner">
     <a class="logo" href="/">
-      <span class="logo-mark">🛒</span>
+      <span class="logo-mark" id="logo-mark"></span>
       <span class="logo-text">NearStock<small>Shop dashboard</small></span>
     </a>
     <nav class="topnav">
       <a href="/"><span class="nav-full">Search</span><span class="nav-short">Find</span></a>
-      <a href="/shop.html" class="active"><span class="nav-full">Shop dashboard</span><span class="nav-short">Shop</span></a>
+      <a href="/shop.html" class="active"><span class="nav-full">Shop</span><span class="nav-short">Shop</span></a>
       <a href="/about.html"><span class="nav-full">How it works</span><span class="nav-short">Docs</span></a>
     </nav>
   </div>
@@ -31,7 +30,7 @@
 
 <main class="wrap">
 
-  <div class="hero" style="padding-bottom:8px">
+  <div class="hero" style="padding-bottom:10px">
     <div class="eyebrow"><span class="dot"></span> Counter console · live</div>
     <h1 style="font-size:clamp(28px,4.6vw,44px)">Shop <span class="grad-text">dashboard</span></h1>
     <p class="lede">Keep stock accurate, push sales from the billing counter, and serve customer requests in the exact order they arrived.</p>
@@ -39,18 +38,18 @@
 
   <section>
     <div class="locbar">
-      <span class="pin">🏪</span>
+      <span class="pin" id="loc-ico"></span>
       <div class="loc-text">
         <strong id="store-name">—</strong>
         <span id="store-address">—</span>
       </div>
       <div class="spacer"></div>
       <select id="store-select" aria-label="Select a shop"></select>
-      <button class="btn btn-sm" id="refresh" type="button">↻ Refresh</button>
+      <button class="btn btn-sm" id="refresh" type="button"><span id="refresh-ico"></span>Refresh</button>
     </div>
   </section>
 
-  <section>
+  <section data-reveal>
     <div class="stats" id="stats"></div>
   </section>
 
@@ -62,7 +61,7 @@
 
     <div class="card card-pad">
       <div class="ringbuf" style="margin-bottom:20px">
-        <svg id="ringbuf" viewBox="0 0 240 240" width="236" height="236" role="img"
+        <svg id="ringbuf" viewBox="0 0 250 250" width="240" height="240" role="img"
              aria-label="Circular array showing which slots hold waiting requests, with the front and rear pointers"></svg>
         <div class="ringbuf-key">
           <div><b>Circular array</b> — the queue's backing store</div>
@@ -74,8 +73,8 @@
 
       <div id="queue-strip" class="queue-strip"></div>
       <div class="queue-legend">
-        <span>◀ <b style="color:var(--ink)">Front</b> — waited longest, served next</span>
-        <span><b style="color:var(--ink)">Rear</b> ▶ — most recent request</span>
+        <span><b>Front</b> — waited longest, served next</span>
+        <span><b>Rear</b> — most recent request</span>
       </div>
 
       <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:center">
@@ -90,7 +89,7 @@
   <section>
     <div class="grid-2">
 
-      <div class="card card-pad">
+      <div class="card card-pad" data-reveal>
         <div class="section-head">
           <h2>Inventory</h2>
           <span class="hint">Edit a quantity or price, then Save that row.</span>
@@ -121,8 +120,8 @@
             <input id="bill-qty" type="number" min="1" value="1">
           </div>
           <div style="display:flex;gap:10px">
-            <button class="btn btn-block" id="bill-sell" type="button">🧾 Sale (−)</button>
-            <button class="btn btn-block" id="bill-restock" type="button">📦 Restock (+)</button>
+            <button class="btn btn-block" id="bill-sell" type="button"><span id="sale-ico"></span>Sale (−)</button>
+            <button class="btn btn-block" id="bill-restock" type="button"><span id="restock-ico"></span>Restock (+)</button>
           </div>
           <div class="dsa-note" style="margin-top:14px">
             POST <b>/api/stores/:id/billing-sync</b> → customers see the new count on their next search.
@@ -153,7 +152,7 @@
     </div>
   </section>
 
-  <footer class="footer">
+  <footer class="card footer">
     <span>NearStock shop console</span>
     <span class="spacer"></span>
     <a href="/api/meta">API status</a>

@@ -5,21 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NearStock — Find what's in stock near you</title>
 <meta name="description" content="NearStock finds which nearby shops have the product you need in stock, ranks them by real distance, and lets you join a shop's request queue.">
-<meta name="theme-color" content="#06070c">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+<meta name="theme-color" content="#dbeafe">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%234a90e2'/><g fill='none' stroke='%23fff' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M16 7l7 4v10l-7 4-7-4V11z'/><path d='M9 11l7 4 7-4M16 15v10'/></g></svg>">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
 
-<div class="aurora"></div>
-<div class="grid-veil"></div>
+<div class="scene"></div>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#7c5cff"/>
-      <stop offset="100%" stop-color="#22d3ee"/>
+      <stop offset="0%" stop-color="#8fc0f5"/>
+      <stop offset="100%" stop-color="#2f6fbf"/>
     </linearGradient>
   </defs>
 </svg>
@@ -27,12 +26,12 @@
 <header class="topbar">
   <div class="wrap topbar-inner">
     <a class="logo" href="/">
-      <span class="logo-mark">🛒</span>
+      <span class="logo-mark" id="logo-mark"></span>
       <span class="logo-text">NearStock<small>Nearby inventory discovery</small></span>
     </a>
     <nav class="topnav">
       <a href="/" class="active"><span class="nav-full">Search</span><span class="nav-short">Find</span></a>
-      <a href="/shop.html"><span class="nav-full">Shop dashboard</span><span class="nav-short">Shop</span></a>
+      <a href="/shop.html"><span class="nav-full">Shop</span><span class="nav-short">Shop</span></a>
       <a href="/about.html"><span class="nav-full">How it works</span><span class="nav-short">Docs</span></a>
     </nav>
   </div>
@@ -46,34 +45,35 @@
     <p class="lede">Search any product and NearStock returns every nearby shop that has it — ranked by real great-circle distance, with live stock counts pushed straight from each shop's billing counter.</p>
 
     <div class="hero-stats">
-      <div class="hero-stat"><div class="n" id="hs-shops">—</div><div class="l">Shops</div></div>
-      <div class="hero-stat"><div class="n" id="hs-products">—</div><div class="l">Products</div></div>
-      <div class="hero-stat"><div class="n" id="hs-units">—</div><div class="l">Units tracked</div></div>
-      <div class="hero-stat"><div class="n" id="hs-queue">—</div><div class="l">In queue</div></div>
+      <div class="hero-stat"><div class="n" id="hs-shops">0</div><div class="l">Shops</div></div>
+      <div class="hero-stat"><div class="n" id="hs-products">0</div><div class="l">Products</div></div>
+      <div class="hero-stat"><div class="n" id="hs-units">0</div><div class="l">Units tracked</div></div>
+      <div class="hero-stat"><div class="n" id="hs-queue">0</div><div class="l">In queue</div></div>
     </div>
   </div>
 
   <section>
-    <form class="searchwrap" id="search-form" role="search">
-      <div class="searchbar">
-        <span class="ico" aria-hidden="true">🔍</span>
-        <input id="q" type="search" placeholder="Search “milk”, “paracetamol”, “notebook”, “charger”…" autocomplete="off" aria-label="Search for a product">
-        <button class="btn btn-primary" type="submit">Search</button>
+    <form class="card searchcard" id="search-form" role="search">
+      <div class="ufield">
+        <span class="lico" id="search-ico"></span>
+        <input id="q" type="search" placeholder="Search a product" autocomplete="off" aria-label="Search for a product">
+        <span class="rail"></span>
+      </div>
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        <div class="chips" id="suggestions" style="flex:1">
+          <span class="chip-label">Try</span>
+          <button class="chip" type="button">Aavin Milk</button>
+          <button class="chip" type="button">Paracetamol</button>
+          <button class="chip" type="button">Notebook</button>
+          <button class="chip" type="button">Charger</button>
+          <button class="chip" type="button">Atta</button>
+        </div>
+        <button class="btn btn-primary" type="submit" id="search-btn">Search</button>
       </div>
     </form>
 
-    <div class="chips" id="suggestions">
-      <span class="chip-label">Try</span>
-      <button class="chip" type="button">Aavin Milk</button>
-      <button class="chip" type="button">Paracetamol</button>
-      <button class="chip" type="button">Notebook</button>
-      <button class="chip" type="button">USB-C Charger</button>
-      <button class="chip" type="button">Atta</button>
-      <button class="chip" type="button">Battery</button>
-    </div>
-
-    <div class="locbar">
-      <span class="pin">📍</span>
+    <div class="card locbar">
+      <span class="pin" id="loc-ico"></span>
       <div class="loc-text">
         <strong id="loc-label">Coimbatore (default)</strong>
         <span id="loc-coords">11.0168, 76.9558</span>
@@ -82,7 +82,11 @@
       <select id="loc-preset" aria-label="Choose a location">
         <option value="">Jump to a landmark…</option>
       </select>
-      <button class="btn btn-sm" id="toggle-instock" type="button" aria-pressed="false">In-stock only</button>
+      <label class="check" title="Hide shops that are out of stock">
+        <input type="checkbox" id="toggle-instock">
+        <span class="box" id="check-ico"></span>
+        <span>In-stock only</span>
+      </label>
       <button class="btn btn-sm btn-primary" id="use-gps" type="button">Use my location</button>
     </div>
   </section>
@@ -106,7 +110,7 @@
 
   <section id="intro-section">
     <div class="grid-2">
-      <div class="card card-pad">
+      <div class="card card-pad" data-reveal>
         <div class="section-head"><h2>Shops on NearStock</h2><span class="hint" id="store-count"></span></div>
         <div class="table-scroll">
           <table id="stores-table">
@@ -116,23 +120,23 @@
         </div>
       </div>
 
-      <div class="card card-pad">
+      <div class="card card-pad" data-reveal style="transition-delay:.1s">
         <div class="section-head"><h2>What runs on every search</h2></div>
-        <ol style="font-size:13.5px;color:var(--ink-2);margin:0;padding-left:20px;line-height:1.85">
-          <li><b style="color:var(--ink)">Linear search</b> over the catalogue, scored so prefix matches rank first.</li>
-          <li><b style="color:var(--ink)">Merge sort</b> — stable, O(n&nbsp;log&nbsp;n) — orders matches by relevance.</li>
-          <li><b style="color:var(--ink)">Haversine</b> distance from you to every stocking shop.</li>
-          <li><b style="color:var(--ink)">MinHeap</b> extracts the k nearest in O(n&nbsp;+&nbsp;k&nbsp;log&nbsp;n) — cheaper than a full sort.</li>
+        <ol style="font-size:13.5px;color:var(--ink-2);margin:0;padding-left:20px;line-height:1.95;font-weight:300">
+          <li><b style="color:var(--ink);font-weight:600">Linear search</b> over the catalogue, scored so prefix matches rank first.</li>
+          <li><b style="color:var(--ink);font-weight:600">Merge sort</b> — stable, O(n&nbsp;log&nbsp;n) — orders matches by relevance.</li>
+          <li><b style="color:var(--ink);font-weight:600">Haversine</b> distance from you to every stocking shop.</li>
+          <li><b style="color:var(--ink);font-weight:600">MinHeap</b> extracts the k nearest in O(n&nbsp;+&nbsp;k&nbsp;log&nbsp;n).</li>
         </ol>
-        <p style="font-size:13.5px;color:var(--ink-2);margin:16px 0 0">
-          Reserving an item uses the project's core structure: a <b style="color:var(--ink)">Queue</b> built as a circular array, so joining the line and being served are both O(1).
+        <p style="font-size:13.5px;color:var(--ink-2);margin:18px 0 0;font-weight:300">
+          Reserving an item uses the project's core structure: a <b style="color:var(--ink);font-weight:600">Queue</b> built as a circular array — joining the line and being served are both O(1).
         </p>
-        <a class="btn btn-sm" href="/about.html" style="margin-top:16px">Read the architecture →</a>
+        <a class="btn btn-sm" href="/about.html" style="margin-top:18px">Read the architecture</a>
       </div>
     </div>
   </section>
 
-  <footer class="footer">
+  <footer class="card footer">
     <span>NearStock — Node.js · Express · MySQL · REST</span>
     <span class="spacer"></span>
     <a href="/api/meta">API status</a>
