@@ -80,8 +80,8 @@ function renderInventory() {
   tbody.innerHTML = rows.map((i) => `
     <tr data-product="${i.product_id}">
       <td>
-        <strong>${esc(i.product.image_emoji)} ${esc(i.product.name)}</strong>
-        <div style="font-size:11.5px;color:var(--ink-3);margin-top:2px">
+        <strong>${esc(i.product.name)}</strong>
+        <div style="font-size:11.5px;color:var(--ink-3);margin-top:3px">
           ${esc(i.product.brand)} · ${esc(i.product.category)} · ${esc(timeAgo(i.updated_at))}
         </div>
         <div class="stockbar"><i style="width:${(i.quantity / maxQ) * 100}%;background:${stockColor(i.quantity)}"></i></div>
@@ -150,7 +150,7 @@ function drawRingBuffer(size) {
 
   const cap = state.ring.capacity;
   const front = state.ring.front % cap;
-  const cx = 120, cy = 120, R = 88, slotR = 13;
+  const cx = 125, cy = 125, R = 92, slotR = 13.5;
   const parts = [];
 
   for (let i = 0; i < cap; i++) {
@@ -163,8 +163,8 @@ function drawRingBuffer(size) {
     const isFront = occupied && offset === 0;
     const cls = isFront ? 'slot-front' : occupied ? 'slot-full' : 'slot-empty';
 
-    parts.push(`<circle class="${cls}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${slotR}"></circle>`);
-    parts.push(`<text class="ptr" x="${x.toFixed(1)}" y="${(y + 3.5).toFixed(1)}" fill="${occupied ? '#fff' : 'var(--ink-3)'}" style="font-size:9px">${i}</text>`);
+    parts.push(`<circle class="slot ${cls}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${slotR}"></circle>`);
+    parts.push(`<text class="ptr" x="${x.toFixed(1)}" y="${(y + 3.5).toFixed(1)}" fill="${occupied ? '#ffffff' : '#6d88ac'}" style="font-size:9px">${i}</text>`);
 
     if (isFront) {
       const lx = cx + Math.cos(angle) * (R + 26);
@@ -178,8 +178,8 @@ function drawRingBuffer(size) {
     }
   }
 
-  parts.push(`<text class="core-n" x="${cx}" y="${cy + 4}" style="font-size:30px">${size}</text>`);
-  parts.push(`<text class="core-l" x="${cx}" y="${cy + 22}">IN QUEUE</text>`);
+  parts.push(`<text class="core-n" x="${cx}" y="${cy + 5}" style="font-size:32px">${size}</text>`);
+  parts.push(`<text class="core-l" x="${cx}" y="${cy + 24}">IN QUEUE</text>`);
 
   svg.innerHTML = parts.join('');
 }
@@ -197,14 +197,14 @@ function renderQueue(data) {
   drawRingBuffer(data.length);
 
   if (!data.length) {
-    strip.innerHTML = '<div class="empty" style="width:100%;padding:28px">No one is waiting. New requests land at the rear of the queue.</div>';
+    strip.innerHTML = `<div class="empty" style="width:100%;padding:30px">${icon('clock')}<br>No one is waiting. New requests land at the rear of the queue.</div>`;
     return;
   }
 
   strip.innerHTML = data.items.map((r, idx) => `
-    ${idx > 0 ? '<div class="qarrow">→</div>' : ''}
+    ${idx > 0 ? `<div class="qarrow">${icon('chevron')}</div>` : ''}
     <div class="qcard ${idx === 0 ? 'front' : ''}" style="animation-delay:${idx * 60}ms">
-      ${idx === 0 ? '' : `<button class="btn btn-sm btn-ghost qx" data-cancel="${r.request_id}" title="Remove from queue">✕</button>`}
+      ${idx === 0 ? '' : `<button class="btn btn-sm btn-ghost qx" data-cancel="${r.request_id}" title="Remove from queue">${icon('close')}</button>`}
       <div class="qpos">${idx === 0 ? 'front · next' : `position ${idx + 1}`}</div>
       <div class="qname">${esc(r.customer_name)}</div>
       <div class="qprod">${esc(r.product ? r.product.name : '')} × ${r.quantity}</div>
@@ -256,7 +256,7 @@ async function peekFront() {
 function renderHistory(history) {
   const host = el('history');
   if (!history.length) {
-    host.innerHTML = '<div class="empty" style="padding:22px">No requests served yet.</div>';
+    host.innerHTML = `<div class="empty" style="padding:24px">${icon('clock')}<br>No requests served yet.</div>`;
     return;
   }
   host.innerHTML = `<div class="table-scroll"><table><tbody>${history.map((h) => `
@@ -283,7 +283,7 @@ function renderSyncLog(events) {
     return `<tr>
       <td>${esc(storeName)}</td>
       <td>${esc(productName)}</td>
-      <td class="num" style="color:${positive ? 'var(--good-ink)' : 'var(--crit-ink)'};font-weight:700">${positive ? '+' : ''}${e.delta}</td>
+      <td class="num" style="color:${positive ? '#0a7d0a' : '#b32e2e'};font-weight:700">${positive ? '+' : ''}${e.delta}</td>
       <td><span class="badge badge-muted">${esc(e.source)}</span></td>
       <td style="color:var(--ink-3)">${esc(timeAgo(e.synced_at))}</td>
     </tr>`;
@@ -318,6 +318,12 @@ async function refresh() {
 /* ----------------------------------- boot --------------------------------- */
 
 async function init() {
+  el('logo-mark').innerHTML = icon('shop');
+  el('loc-ico').innerHTML = icon('shop');
+  el('refresh-ico').innerHTML = icon('refresh');
+  el('sale-ico').innerHTML = icon('sale');
+  el('restock-ico').innerHTML = icon('restock');
+
   drawRingBuffer(0);
   await loadStores();
   await refresh();
